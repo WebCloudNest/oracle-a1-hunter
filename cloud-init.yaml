@@ -1,0 +1,32 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+packages: [tmux, git, curl, unzip, htop]
+
+write_files:
+  - path: /etc/systemd/system/claude-rc.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Claude Code Remote Control (in tmux)
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=forking
+      User=ubuntu
+      WorkingDirectory=/home/ubuntu/projects
+      Environment=PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin
+      ExecStart=/usr/bin/tmux new-session -d -s claude-rc "while true; do claude remote-control --name oracle-box; echo 'restarting in 15s'; sleep 15; done"
+      ExecStop=/usr/bin/tmux kill-session -t claude-rc
+      Restart=always
+      RestartSec=30
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - mkdir -p /home/ubuntu/projects
+  - chown -R ubuntu:ubuntu /home/ubuntu/projects
+  - su - ubuntu -c 'curl -fsSL https://claude.ai/install.sh | bash'
+  - systemctl daemon-reload

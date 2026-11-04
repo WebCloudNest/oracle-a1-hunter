@@ -1,0 +1,55 @@
+name: oracle-a1-hunter
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # every 5 min (GitHub may delay runs a bit)
+  workflow_dispatch: # "Run workflow" button for a manual try
+
+permissions:
+  contents: read
+  issues: write # to open the "server ready" issue
+  actions: write # to switch this workflow off after success
+
+concurrency:
+  group: oracle-a1-hunter
+  cancel-in-progress: false
+
+jobs:
+  try-create:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install --quiet "oci>=2.100,<3"
+
+      - id: hunt
+        run: python hunt.py
+        env:
+          OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+          OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_REGION: ${{ secrets.OCI_REGION }}
+          OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+          OCI_SUBNET_OCID: ${{ secrets.OCI_SUBNET_OCID }}
+          SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
+
+      - name: Notify and switch off
+        if: steps.hunt.outputs.status == 'created' || steps.hunt.outputs.status == 'exists'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          IP: ${{ steps.hunt.outputs.public_ip }}
+        run: |
+          gh issue create \
+            --title "Oracle server is ready: $IP" \
+            --body "@${{ github.repository_owner }} your free A1 server (claude-box) is running.
+
+          SSH: \`ssh -i E:\\oracle-keys\\ssh-key-2026-11-04.key ubuntu@$IP\`
+
+          This workflow has switched itself off."
+          gh workflow disable oracle-a1-hunter
