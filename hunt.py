@@ -13,8 +13,8 @@ import oci
 
 NAME = os.environ.get("INSTANCE_NAME", "claude-box")
 SHAPE = "VM.Standard.A1.Flex"
-OCPUS = float(os.environ.get("OCPUS", "2"))
-MEMORY_GB = float(os.environ.get("MEMORY_GB", "12"))
+OCPUS = float(os.environ.get("OCPUS", "1"))
+MEMORY_GB = float(os.environ.get("MEMORY_GB", "6"))
 BOOT_GB = int(os.environ.get("BOOT_GB", "50"))
 
 # Free-tier guardrail: this tenancy's A1 limit is 2 OCPU / 12 GB.
